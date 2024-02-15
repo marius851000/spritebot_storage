@@ -1,0 +1,5 @@
+target/
+sprite/
+flamegraph.svg
+perf.data*
+test/
