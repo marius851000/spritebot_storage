@@ -1,12 +1,14 @@
 [package]
 name = "spritebot_storage"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "A library to read and write SpriteBot files"
 keywords = [ "parser" ]
 categories = [ "parser-implementations" ]
 authors = ["marius851000 <crates@mariusdavid.fr>"]
+readme = "../README.md"
+repository = "https://github.com/marius851000/spritebot_storage"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
