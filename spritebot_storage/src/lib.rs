@@ -1,7 +1,7 @@
 use std::io::{BufReader, Cursor};
 
 use animdata_xml::AnimsXML;
-use image::{GenericImageView, ImageBuffer, ImageFormat, Rgba, GenericImage, ImageOutputFormat};
+use image::{GenericImage, GenericImageView, ImageBuffer, ImageFormat, ImageOutputFormat, Rgba};
 
 mod error;
 pub use error::SpriteBotStorageError;
@@ -92,7 +92,7 @@ impl Sprite {
     pub fn new_empty(shadow_size: u8) -> Self {
         Self {
             shadow_size,
-            animations: Vec::new()
+            animations: Vec::new(),
         }
     }
 
@@ -101,7 +101,8 @@ impl Sprite {
         let animdata_xml_file = vfs
             .open_file("/AnimData.xml")
             .map_err(|err| SpriteBotStorageError::VfsError(err, "/AnimData.xml".to_string()))?;
-        let animdata_xml: AnimDataXML = quick_xml::de::from_reader(BufReader::new(animdata_xml_file))?;
+        let animdata_xml: AnimDataXML =
+            quick_xml::de::from_reader(BufReader::new(animdata_xml_file))?;
         let mut animations = Vec::new();
 
         for anim_source in &animdata_xml.anims.anim {
@@ -158,13 +159,15 @@ impl Sprite {
                 }
 
                 let mut frames = Vec::new();
-                for (row_nb, (((anim_local_image, shadow_local_image), offset_local_image), duration)) in
-                    column_anims
-                        .into_iter()
-                        .zip(column_shadows)
-                        .zip(column_offsets)
-                        .zip(anim_source.durations.duration.iter().copied())
-                        .enumerate()
+                for (
+                    row_nb,
+                    (((anim_local_image, shadow_local_image), offset_local_image), duration),
+                ) in column_anims
+                    .into_iter()
+                    .zip(column_shadows)
+                    .zip(column_offsets)
+                    .zip(anim_source.durations.duration.iter().copied())
+                    .enumerate()
                 {
                     let offsets = FrameOffset::from_images(
                         &offset_local_image,
@@ -177,7 +180,9 @@ impl Sprite {
                     frames.push(Frame {
                         image: anim_local_image,
                         offsets,
-                        duration: duration.try_into().map_err(SpriteBotStorageError::TooLargeDuration)?
+                        duration: duration
+                            .try_into()
+                            .map_err(SpriteBotStorageError::TooLargeDuration)?,
                     })
                 }
 
@@ -200,24 +205,34 @@ impl Sprite {
         })
     }
 
-    pub fn write_to_folder<T: vfs::FileSystem>(&self, vfs: &mut T) -> Result<(), SpriteBotStorageError> {
+    pub fn write_to_folder<T: vfs::FileSystem>(
+        &self,
+        vfs: &mut T,
+    ) -> Result<(), SpriteBotStorageError> {
         let mut animdata = AnimDataXML {
             shadow_size: self.shadow_size,
-            anims: AnimsXML {
-                anim: Vec::new()
-            }
+            anims: AnimsXML { anim: Vec::new() },
         };
 
         for animation in &self.animations {
             let (segment_size, anim_img, offset_img, shadow_img) = animation.generate_sheet()?;
-            
-            let write_image = |image: RgbaU8, file_name: String| -> Result<(), SpriteBotStorageError> {
-                let mut buffer = Vec::new();
-                image.write_to(&mut Cursor::new(&mut buffer), ImageOutputFormat::Png).map_err(|e| SpriteBotStorageError::WriteImageError(e, file_name.to_string()))?;
-                let mut anim_file = vfs.create_file(&file_name).map_err(|e| SpriteBotStorageError::VfsError(e, file_name.to_string()))?;
-                anim_file.write_all(&buffer).map_err(|e| SpriteBotStorageError::WriteFileError(e, file_name))?;
-                Ok(())
-            };
+
+            let write_image =
+                |image: RgbaU8, file_name: String| -> Result<(), SpriteBotStorageError> {
+                    let mut buffer = Vec::new();
+                    image
+                        .write_to(&mut Cursor::new(&mut buffer), ImageOutputFormat::Png)
+                        .map_err(|e| {
+                            SpriteBotStorageError::WriteImageError(e, file_name.to_string())
+                        })?;
+                    let mut anim_file = vfs
+                        .create_file(&file_name)
+                        .map_err(|e| SpriteBotStorageError::VfsError(e, file_name.to_string()))?;
+                    anim_file
+                        .write_all(&buffer)
+                        .map_err(|e| SpriteBotStorageError::WriteFileError(e, file_name))?;
+                    Ok(())
+                };
 
             write_image(anim_img, format!("{}-Anim.png", animation.name))?;
             write_image(offset_img, format!("{}-Offsets.png", animation.name))?;
@@ -232,14 +247,24 @@ impl Sprite {
                 frame_width: segment_size.0,
                 frame_height: segment_size.1,
                 durations: DurationsXML {
-                    duration: animation.images.get(0).unwrap_or(&vec![]).iter().map(|x| x.duration as usize).collect()
-                }
+                    duration: animation
+                        .images
+                        .get(0)
+                        .unwrap_or(&vec![])
+                        .iter()
+                        .map(|x| x.duration as usize)
+                        .collect(),
+                },
             })
         }
 
         let animdata_str = quick_xml::se::to_string(&animdata)?;
-        let mut animdata_file = vfs.create_file("AnimData.xml").map_err(|e| SpriteBotStorageError::VfsError(e, "AnimData.xml".to_string()))?;
-        animdata_file.write_all(animdata_str.as_bytes()).map_err(|e| SpriteBotStorageError::WriteFileError(e, "AnimData.xml".to_string()))?;
+        let mut animdata_file = vfs
+            .create_file("AnimData.xml")
+            .map_err(|e| SpriteBotStorageError::VfsError(e, "AnimData.xml".to_string()))?;
+        animdata_file
+            .write_all(animdata_str.as_bytes())
+            .map_err(|e| SpriteBotStorageError::WriteFileError(e, "AnimData.xml".to_string()))?;
         Ok(())
     }
 }
@@ -256,21 +281,39 @@ pub struct Animation {
 
 impl Animation {
     /// The three images are 1. Anim, 2. Offsets 3. Shadow
-    pub fn generate_sheet(&self) -> Result<((u32, u32), RgbaU8, RgbaU8, RgbaU8), SpriteBotStorageError> {
-        let mut max_x = 8;
-        let mut max_y = 8;
+    pub fn generate_sheet(
+        &self,
+    ) -> Result<((u32, u32), RgbaU8, RgbaU8, RgbaU8), SpriteBotStorageError> {
+        let mut max_size = (8, 8);
         let mut max_row = 1;
         for line in &self.images {
             max_row = max_row.max(line.len());
             for row in line {
-                max_x = max_x.max(row.image.dimensions().0);
-                max_y = max_y.max(row.image.dimensions().1);
+                fn max_size_offset(first: (u32, u32), offset: (u16, u16)) -> (u32, u32) {
+                    (
+                        first.0.max(offset.0 as u32 + 1),
+                        first.1.max(offset.1 as u32 + 1),
+                    )
+                }
+                max_size = (
+                    max_size.0.max(row.image.dimensions().0),
+                    max_size.1.max(row.image.dimensions().1),
+                );
+                max_size = max_size_offset(max_size, row.offsets.center);
+                max_size = max_size_offset(max_size, row.offsets.hand_left);
+                max_size = max_size_offset(max_size, row.offsets.hand_right);
+                max_size = max_size_offset(max_size, row.offsets.head);
+                max_size = max_size_offset(max_size, row.offsets.shadow);
             }
         }
 
         let image_dimension = (
-            max_x * TryInto::<u32>::try_into(max_row).map_err(SpriteBotStorageError::TooLargeGeneratedSheet)?,
-            max_y * TryInto::<u32>::try_into(self.images.len()).map_err(SpriteBotStorageError::TooLargeGeneratedSheet)?
+            max_size.0
+                * TryInto::<u32>::try_into(max_row)
+                    .map_err(SpriteBotStorageError::TooLargeGeneratedSheet)?,
+            max_size.1
+                * TryInto::<u32>::try_into(self.images.len())
+                    .map_err(SpriteBotStorageError::TooLargeGeneratedSheet)?,
         );
 
         let mut anim_image = RgbaU8::new(image_dimension.0, image_dimension.1);
@@ -282,33 +325,52 @@ impl Animation {
         for line in &self.images {
             for row in line {
                 anim_image.copy_from(&row.image, start_x, start_y).unwrap(); // Should never fail
-                shadow_image.put_pixel(start_x + row.offsets.shadow.0 as u32, start_y + row.offsets.shadow.1 as u32, Rgba([255, 255, 255, 255]));
-                if row.offsets.head == row.offsets.hand_left || row.offsets.head == row.offsets.hand_right {
+                shadow_image.put_pixel(
+                    start_x + row.offsets.shadow.0 as u32,
+                    start_y + row.offsets.shadow.1 as u32,
+                    Rgba([255, 255, 255, 255]),
+                );
+                if row.offsets.head == row.offsets.hand_left
+                    || row.offsets.head == row.offsets.hand_right
+                {
                     return Err(SpriteBotStorageError::InvalidHeadPosition);
                 }
-                offset_images.put_pixel(start_x + row.offsets.head.0 as u32, start_y + row.offsets.head.1 as u32, Rgba([0, 0, 0, 255]));
+                offset_images.put_pixel(
+                    start_x + row.offsets.head.0 as u32,
+                    start_y + row.offsets.head.1 as u32,
+                    Rgba([0, 0, 0, 255]),
+                );
                 {
-                    let center_pixel = offset_images.get_pixel_mut(start_x + row.offsets.center.0 as u32, start_y + row.offsets.center.1 as u32);
+                    let center_pixel = offset_images.get_pixel_mut(
+                        start_x + row.offsets.center.0 as u32,
+                        start_y + row.offsets.center.1 as u32,
+                    );
                     center_pixel.0[1] = 255;
                     center_pixel.0[3] = 255;
                 }
                 {
-                    let hand_right_pixel = offset_images.get_pixel_mut(start_x + row.offsets.hand_right.0 as u32, start_y + row.offsets.hand_right.1 as u32);
+                    let hand_right_pixel = offset_images.get_pixel_mut(
+                        start_x + row.offsets.hand_right.0 as u32,
+                        start_y + row.offsets.hand_right.1 as u32,
+                    );
                     hand_right_pixel[2] = 255;
                     hand_right_pixel[3] = 255;
                 }
                 {
-                    let hand_left_pixel = offset_images.get_pixel_mut(start_x + row.offsets.hand_left.0 as u32, start_y + row.offsets.hand_left.1 as u32);
+                    let hand_left_pixel = offset_images.get_pixel_mut(
+                        start_x + row.offsets.hand_left.0 as u32,
+                        start_y + row.offsets.hand_left.1 as u32,
+                    );
                     hand_left_pixel[0] = 255;
                     hand_left_pixel[3] = 255;
                 }
-                start_x += max_x;
+                start_x += max_size.0;
             }
             start_x = 0;
-            start_y += max_y;
+            start_y += max_size.1;
         }
 
-        Ok(((max_x, max_y), anim_image, offset_images, shadow_image))
+        Ok((max_size, anim_image, offset_images, shadow_image))
     }
 }
 
@@ -321,11 +383,11 @@ pub struct Frame {
 
 #[derive(Debug)]
 pub struct FrameOffset {
-    pub head: (i16, i16),
-    pub hand_left: (i16, i16),
-    pub hand_right: (i16, i16),
-    pub center: (i16, i16),
-    pub shadow: (i16, i16),
+    pub head: (u16, u16),
+    pub hand_left: (u16, u16),
+    pub hand_right: (u16, u16),
+    pub center: (u16, u16),
+    pub shadow: (u16, u16),
 }
 
 fn find_pixel_in_image<T: Fn(&Rgba<u8>) -> bool>(
@@ -336,7 +398,7 @@ fn find_pixel_in_image<T: Fn(&Rgba<u8>) -> bool>(
     row_nb: usize,
     image_kind: &str,
     color_text: &str,
-) -> Result<(u32, u32), SpriteBotStorageError> {
+) -> Result<(u16, u16), SpriteBotStorageError> {
     let mut result = None;
     for (x, y, pixel) in image.enumerate_pixels() {
         if filter(pixel) {
@@ -353,7 +415,12 @@ fn find_pixel_in_image<T: Fn(&Rgba<u8>) -> bool>(
         }
     }
     if let Some(r) = result {
-        Ok(r)
+        Ok((
+            r.0.try_into()
+                .map_err(|_| SpriteBotStorageError::OffsetTooLarge)?,
+            r.1.try_into()
+                .map_err(|_| SpriteBotStorageError::OffsetTooLarge)?,
+        ))
     } else {
         Err(SpriteBotStorageError::ColorNotFoundInPixelData(
             anim_name.into(),
@@ -363,11 +430,6 @@ fn find_pixel_in_image<T: Fn(&Rgba<u8>) -> bool>(
             color_text.into(),
         ))
     }
-}
-
-//TODO:
-fn todo_fix(current: (u32, u32)) -> (i16, i16) {
-    return (current.0 as i16, current.1 as i16);
 }
 
 impl FrameOffset {
@@ -428,11 +490,11 @@ impl FrameOffset {
             "white",
         )?;
         Ok(FrameOffset {
-            head: todo_fix(black_offset.unwrap_or(green_offset)),
-            center: todo_fix(green_offset),
-            hand_left: todo_fix(red_offset),
-            hand_right: todo_fix(blue_offset),
-            shadow: todo_fix(shadow_center),
+            head: black_offset.unwrap_or(green_offset),
+            center: green_offset,
+            hand_left: red_offset,
+            hand_right: blue_offset,
+            shadow: shadow_center,
         })
     }
 }

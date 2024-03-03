@@ -1,4 +1,4 @@
-use std::{num::TryFromIntError, io};
+use std::{io, num::TryFromIntError};
 
 use image::ImageError;
 use thiserror::Error;
@@ -28,10 +28,14 @@ pub enum SpriteBotStorageError {
     TooLargeDuration(#[source] TryFromIntError),
     #[error("The dimension of a sheet is too large (more than 2^32). You probably have an insanly large amount of image.")]
     TooLargeGeneratedSheet(#[source] TryFromIntError),
-    #[error("The position of the head offset in file is invalid, as it would overwrite an hand offset")]
+    #[error(
+        "The position of the head offset in file is invalid, as it would overwrite an hand offset"
+    )]
     InvalidHeadPosition,
     #[error("Error writing the image at {1}")]
     WriteImageError(#[source] ImageError, String),
     #[error("Error writing to {1}")]
-    WriteFileError(#[source] io::Error, String)
+    WriteFileError(#[source] io::Error, String),
+    #[error("An offset is placed somewhere too far from the original (should only happen on sheet greater than 2^16 in width or height)")]
+    OffsetTooLarge,
 }

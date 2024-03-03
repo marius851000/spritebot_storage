@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "PascalCase")]
 pub struct AnimDataXML {
     pub shadow_size: u8,
-    pub anims: AnimsXML
+    pub anims: AnimsXML,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -28,11 +28,11 @@ pub struct AnimXML {
     pub return_frame: Option<u32>,
     pub frame_width: u32,
     pub frame_height: u32,
-    pub durations: DurationsXML
+    pub durations: DurationsXML,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct DurationsXML {
-    pub duration: Vec<usize>
+    pub duration: Vec<usize>,
 }
