@@ -5,11 +5,14 @@ use thiserror::Error;
 use vfs::VfsError;
 
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum SpriteBotStorageError {
     #[error("Error with the underlying virtual file system with the file {0}")]
     VfsError(#[source] VfsError, String),
+    #[error("Error while reading the AnimData.xml file")]
+    XmlReadError(#[from] quick_xml::DeError),
     #[error("Error while writing the AnimData.xml file")]
-    XmlError(#[from] quick_xml::DeError),
+    XmlWriteError(#[from] quick_xml::SeError),
     #[error("Error reading the image {0} for the animation {1}")]
     ErrorImageRead(String, String, #[source] image::ImageError),
     #[error("The {0} for the image {1}-{2} is zero")]

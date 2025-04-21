@@ -3,3 +3,4 @@ sprite/
 flamegraph.svg
 perf.data*
 test/
+Cargo.lock

@@ -1,6 +1,6 @@
 [package]
 name = "spritebot_storage"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "A library to read and write SpriteBot files"
@@ -12,8 +12,8 @@ repository = "https://github.com/marius851000/spritebot_storage"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-vfs = "0.10.0"
-image = "0.24.5"
-quick-xml = { version = "0.31.0", features = [ "serialize" ] }
+vfs = "0.12.0"
+image = "0.25.0"
+quick-xml = { version = "0.37.0", features = [ "serialize" ] }
 serde = { version = "1.0.152", features = [ "derive" ] }
-thiserror = "1.0.38"
+thiserror = "2.0.0"

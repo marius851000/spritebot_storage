@@ -1,7 +1,7 @@
 use std::io::{BufReader, Cursor};
 
 use animdata_xml::AnimsXML;
-use image::{GenericImage, GenericImageView, ImageBuffer, ImageFormat, ImageOutputFormat, Rgba};
+use image::{GenericImage, GenericImageView, ImageBuffer, ImageFormat, Rgba};
 
 mod error;
 pub use error::SpriteBotStorageError;
@@ -60,7 +60,7 @@ fn get_image<T: vfs::FileSystem>(
         .open_file(&path)
         .map_err(|err| SpriteBotStorageError::VfsError(err, path.to_string()))?;
 
-    let img = image::io::Reader::with_format(BufReader::new(image_file), ImageFormat::Png)
+    let img = image::ImageReader::with_format(BufReader::new(image_file), ImageFormat::Png)
         .decode()
         .map_err(|err| {
             SpriteBotStorageError::ErrorImageRead(kind.to_string(), name.to_string(), err)
@@ -221,7 +221,7 @@ impl Sprite {
                 |image: RgbaU8, file_name: String| -> Result<(), SpriteBotStorageError> {
                     let mut buffer = Vec::new();
                     image
-                        .write_to(&mut Cursor::new(&mut buffer), ImageOutputFormat::Png)
+                        .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Png)
                         .map_err(|e| {
                             SpriteBotStorageError::WriteImageError(e, file_name.to_string())
                         })?;
